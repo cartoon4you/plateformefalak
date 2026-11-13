@@ -1,6 +1,6 @@
 {
-  "name": "Remix FamFlix",
-  "description": "Imported from GitHub: abdulrhman7-star/falaksite",
+  "name": "فلك Falak TV",
+  "description": "منصة فلك لمشاهدة وتصفح أحدث الأفلام والمسلسلات العالمية بجودة فائقة وسيرفرات سريعة.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

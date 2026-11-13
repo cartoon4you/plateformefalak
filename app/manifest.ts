@@ -3,9 +3,9 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Moviey - Akwam Streamer',
-    short_name: 'Moviey',
-    description: 'منصة لمشاهدة وتحميل الأفلام والمسلسلات بجودة عالية وبدون إعلانات.',
+    name: 'فلك Falak TV — منصة الأفلام والمسلسلات',
+    short_name: 'فلك TV',
+    description: 'منصة فلك لمشاهدة وتصفح أحدث الأفلام والمسلسلات العالمية بجودة فائقة وسيرفرات سريعة وترجمة ذكية.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

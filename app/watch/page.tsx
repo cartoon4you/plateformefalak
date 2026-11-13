@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import Header from '@/components/Header';
 import WatchClientPlayer from '@/components/WatchClientPlayer';
+import Footer from '@/components/Footer';
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -11,13 +13,13 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const title = typeof params.title === 'string' ? params.title : 'مشاهدة وتحميل';
   const image = typeof params.image === 'string' ? params.image : '';
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moviey.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://falaktv.app';
   const embedUrl = `${siteUrl}/embed?url=${encodeURIComponent(rawUrl)}&title=${encodeURIComponent(title)}&autoplay=1`;
   const canonicalUrl = `${siteUrl}/watch?url=${encodeURIComponent(rawUrl)}`;
-  const description = `شاهد وتحميل ${title} بأعلى جودة وبدون إعلانات عبر البث المباشر المباشر والسريع.`;
+  const description = `شاهد وتحميل ${title} بأعلى جودة وبدون إعلانات عبر البث المباشر والسريع على منصة فلك TV.`;
 
   return {
-    title: `${title} | FamFlix`,
+    title: `${title} | فلك Falak TV`,
     description,
     alternates: {
       canonical: canonicalUrl,
@@ -69,5 +71,13 @@ export default async function WatchPage({ searchParams }: PageProps) {
   const title = typeof params.title === 'string' ? params.title : 'مشاهدة الفيديو';
   const image = typeof params.image === 'string' ? params.image : '';
 
-  return <WatchClientPlayer initialUrl={rawUrl} title={title} image={image} />;
+  return (
+    <div className="min-h-screen flex flex-col bg-[#07080b]">
+      <Header />
+      <main className="flex-1">
+        <WatchClientPlayer initialUrl={rawUrl} title={title} image={image} />
+      </main>
+      <Footer />
+    </div>
+  );
 }

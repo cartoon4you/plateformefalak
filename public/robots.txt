@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /api/stream
+Disallow: /api/get-link
+
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+Sitemap: https://falaktv.app/sitemap.xml

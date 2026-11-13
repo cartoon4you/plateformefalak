@@ -6,6 +6,7 @@ import {
   Play, 
   Download, 
   ArrowRight, 
+  ArrowLeft,
   ExternalLink, 
   RefreshCw, 
   AlertCircle, 
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import EmbedModal from './EmbedModal';
 import { addToWatchHistory } from '@/lib/history';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface VideoLink {
   quality: string;
@@ -31,6 +33,7 @@ interface WatchClientPlayerProps {
 }
 
 export default function WatchClientPlayer({ initialUrl, title, image }: WatchClientPlayerProps) {
+  const { isRTL, t } = useLanguage();
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([]);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(Boolean(initialUrl));
@@ -42,6 +45,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
   const [copiedShare, setCopiedShare] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const BackArrow = isRTL ? ArrowRight : ArrowLeft;
 
   const fetchLinks = () => {
     if (!initialUrl) {
@@ -134,15 +138,15 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 min-h-screen text-white font-sans" dir="rtl">
+    <div className="max-w-5xl mx-auto p-4 md:p-6 min-h-screen text-white font-sans" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Navigation */}
       <div className="flex items-center justify-between mb-6">
         <Link 
           href="/" 
           className="flex items-center gap-2 text-gray-400 hover:text-white bg-gray-800/80 hover:bg-gray-800 px-4 py-2 rounded-xl transition-colors border border-gray-700/50 text-sm font-medium"
         >
-          <ArrowRight className="w-4 h-4" />
-          العودة للرئيسية
+          <BackArrow className="w-4 h-4" />
+          {t('watch_back_home')}
         </Link>
 
         <button
@@ -152,12 +156,12 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
           {copiedShare ? (
             <>
               <Check className="w-4 h-4 text-emerald-400" />
-              <span className="text-emerald-400">تم نسخ الرابط!</span>
+              <span className="text-emerald-400">{t('watch_copied')}</span>
             </>
           ) : (
             <>
               <Share2 className="w-4 h-4 text-blue-400" />
-              <span>مشاركة الصفحة</span>
+              <span>{t('watch_share')}</span>
             </>
           )}
         </button>
@@ -170,7 +174,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
       {loading ? (
         <div className="aspect-video bg-gray-900 border border-gray-800 rounded-2xl flex flex-col items-center justify-center gap-4 text-gray-400">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent shadow-lg shadow-blue-500/20"></div>
-          <span className="text-sm font-medium">جاري استخراج رابط البث المباشر الموقّع...</span>
+          <span className="text-sm font-medium">{t('player_loading')}</span>
         </div>
       ) : error ? (
         <div className="bg-red-500/10 border border-red-500/30 text-red-300 p-6 rounded-2xl text-center font-medium my-6 flex flex-col items-center gap-3 max-w-lg mx-auto">
@@ -181,7 +185,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
             className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold transition-colors mt-2"
           >
             <RefreshCw className="w-4 h-4" />
-            إعادة المحاولة
+            {t('watch_retry')}
           </button>
         </div>
       ) : videoLinks.length > 0 ? (
@@ -216,7 +220,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
           {/* Mode Switcher Indicator */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-900/90 border border-gray-800 p-3.5 rounded-xl">
             <div className="flex items-center gap-2 text-xs md:text-sm text-gray-300">
-              <span className="font-semibold text-gray-400">وضع التدفق:</span>
+              <span className="font-semibold text-gray-400">{t('watch_stream_mode')}</span>
               <div className="flex items-center bg-gray-800 p-1 rounded-lg border border-gray-700/60">
                 <button
                   onClick={() => {
@@ -231,7 +235,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
                   title="تشغيل فوري مباشر من المصدر"
                 >
                   <Zap className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>مباشر (Direct)</span>
+                  <span>{t('watch_direct')}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -246,7 +250,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
                   title="تشغيل عبر سيرفر البروكسي الداخلي"
                 >
                   <Shield className="w-3.5 h-3.5 text-cyan-300" />
-                  <span>بروكسي (Proxy)</span>
+                  <span>{t('watch_proxy')}</span>
                 </button>
               </div>
             </div>
@@ -268,7 +272,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
                   className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  تحديث الرابط
+                  {t('watch_retry')}
                 </button>
               </div>
             </div>
@@ -277,7 +281,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
           {/* Controls Bar: Qualities & Embed & Download */}
           <div className="bg-gray-800/90 border border-gray-700/60 p-5 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-xl">
             <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
-              <span className="text-gray-400 text-sm font-medium ml-2">الجودة المتوفرة:</span>
+              <span className="text-gray-400 text-sm font-medium ml-2">{t('watch_qualities')}</span>
               {videoLinks.map((link, idx) => (
                 <button
                   key={`watch-quality-${idx}`}
@@ -299,7 +303,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
                 className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20"
               >
                 <Code2 className="w-4 h-4" />
-                <span>كود التضمين</span>
+                <span>{t('watch_embed')}</span>
               </button>
 
               {activeVideoUrl && (
@@ -310,7 +314,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
                   className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-semibold text-gray-200 transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  <span>فتح بالمصدر</span>
+                  <span>{t('watch_source')}</span>
                 </a>
               )}
 
@@ -320,7 +324,7 @@ export default function WatchClientPlayer({ initialUrl, title, image }: WatchCli
                 className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-white transition-all shadow-lg shadow-green-600/20"
               >
                 <Download className="w-5 h-5" />
-                تحميل ({videoLinks[selectedQualityIdx]?.quality || 'الفيديو'})
+                {t('watch_download')} ({videoLinks[selectedQualityIdx]?.quality || 'Video'})
               </a>
             </div>
           </div>

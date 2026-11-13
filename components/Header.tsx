@@ -2,50 +2,81 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Film, LogIn, LogOut, Search as SearchIcon, Globe, ChevronDown, Check } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { 
+  Film, 
+  LogIn, 
+  LogOut, 
+  Search as SearchIcon, 
+  Globe, 
+  ChevronDown, 
+  Check, 
+  Menu, 
+  X, 
+  BookOpen, 
+  Info, 
+  Mail, 
+  Shield, 
+  Scale, 
+  Home, 
+  Bookmark 
+} from 'lucide-react';
 import { T, LANGUAGES } from '@/lib/i18n';
 import { LangCode } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 import SearchDropdown from './SearchDropdown';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface HeaderProps {
-  lang: LangCode;
-  onLangChange: (lang: LangCode) => void;
-  activeTab: 'home' | 'search' | 'favorites';
-  onTabChange: (tab: 'home' | 'search' | 'favorites') => void;
-  favoritesCount: number;
-  user: any;
-  onLogin: () => void;
-  onLogout: () => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  searchResults: any[];
-  searchLoading: boolean;
-  onSelectResult: (item: any) => void;
-  searchOpen: boolean;
-  setSearchOpen: (open: boolean) => void;
+  lang?: LangCode;
+  onLangChange?: (lang: LangCode) => void;
+  activeTab?: 'home' | 'search' | 'favorites';
+  onTabChange?: (tab: 'home' | 'search' | 'favorites') => void;
+  favoritesCount?: number;
+  user?: any;
+  onLogin?: () => void;
+  onLogout?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+  searchResults?: any[];
+  searchLoading?: boolean;
+  onSelectResult?: (item: any) => void;
+  searchOpen?: boolean;
+  setSearchOpen?: (open: boolean) => void;
 }
 
 export default function Header({
-  lang,
+  lang: propLang,
   onLangChange,
-  activeTab,
+  activeTab = 'home',
   onTabChange,
-  favoritesCount,
-  user,
+  favoritesCount = 0,
+  user = null,
   onLogin,
   onLogout,
-  searchQuery,
+  searchQuery = '',
   onSearchChange,
-  searchResults,
-  searchLoading,
+  searchResults = [],
+  searchLoading = false,
   onSelectResult,
-  searchOpen,
+  searchOpen = false,
   setSearchOpen,
-}: HeaderProps) {
-  const t = T[lang] || T.ar;
+}: HeaderProps = {}) {
+  const router = useRouter();
+  const globalLang = useLanguage();
+  const activeLang = propLang || globalLang.lang;
+  const t = T[activeLang] || T.ar;
+  const isRTL = activeLang === 'ar';
+
   const [langOpen, setLangOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchQuery);
   const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -61,13 +92,35 @@ export default function Header({
     };
   }, [langOpen]);
 
-  const currentLang = LANGUAGES.find((item) => item.code === lang) || LANGUAGES[0];
-
-  const handleLogoKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onTabChange('home');
+  const handleLanguageSelect = (newCode: LangCode) => {
+    globalLang.setLanguage(newCode);
+    if (onLangChange) {
+      onLangChange(newCode);
     }
+    setLangOpen(false);
+    setMobileMenuOpen(false);
+  };
+
+  const handleNavClick = (tab: 'home' | 'search' | 'favorites') => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      router.push(tab === 'home' ? '/' : `/?tab=${tab}`);
+    }
+    setMobileMenuOpen(false);
+  };
+
+  const currentLangObj = LANGUAGES.find((item) => item.code === activeLang) || LANGUAGES[0];
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!localSearch.trim()) return;
+    if (onSearchChange) {
+      onSearchChange(localSearch);
+    } else {
+      router.push(`/?q=${encodeURIComponent(localSearch.trim())}`);
+    }
+    setMobileMenuOpen(false);
   };
 
   const getUserInitial = () => {
@@ -78,16 +131,19 @@ export default function Header({
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-40 bg-[#07080b]/90 backdrop-blur-md border-b border-white/10 transition-colors">
+    <header className="fixed top-0 inset-x-0 z-40 bg-[#07080b]/90 backdrop-blur-md border-b border-white/10 transition-colors" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="container mx-auto px-4 h-[72px] flex items-center justify-between gap-3">
         {/* Left Section: Brand Logo */}
         <div className="flex items-center gap-3">
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => onTabChange('home')}
-            onKeyDown={handleLogoKeyDown}
-            aria-label="العودة إلى الصفحة الرئيسية فلك Falak TV"
+          <Link
+            href="/"
+            onClick={(e) => {
+              if (onTabChange) {
+                e.preventDefault();
+                onTabChange('home');
+              }
+            }}
+            aria-label="فلك Falak TV"
             className="flex items-center gap-2.5 cursor-pointer group focus-visible:ring-2 focus-visible:ring-red-500 rounded-lg p-1 transition"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-red-700 to-red-500 flex items-center justify-center shadow-lg shadow-red-600/30 group-hover:scale-105 transition-transform">
@@ -101,70 +157,100 @@ export default function Header({
                 Falak TV
               </span>
             </div>
-          </div>
+          </Link>
         </div>
 
-        {/* Center Section: Desktop Navigation Links */}
-        <div className="hidden md:flex items-center gap-4 flex-1 justify-center max-w-xl mx-4">
-          <nav className="flex items-center gap-1.5 bg-white/5 border border-white/10 p-1 rounded-full" aria-label="التنقل الرئيسي">
+        {/* Center Section: Desktop Navigation Links & Search */}
+        <div className="hidden lg:flex items-center gap-3 flex-1 justify-center max-w-2xl mx-4">
+          <nav className="flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-full text-xs" aria-label="التنقل الرئيسي">
             <button
               type="button"
-              onClick={() => onTabChange('home')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+              onClick={() => handleNavClick('home')}
+              className={`px-3.5 py-1.5 rounded-full font-bold transition-all duration-200 cursor-pointer ${
                 activeTab === 'home'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              {t.nav_home}
+              {t.nav_home || 'الرئيسية'}
             </button>
+
             <button
               type="button"
-              onClick={() => onTabChange('favorites')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer relative flex items-center gap-1.5 ${
+              onClick={() => handleNavClick('favorites')}
+              className={`px-3.5 py-1.5 rounded-full font-bold transition-all duration-200 cursor-pointer relative flex items-center gap-1.5 ${
                 activeTab === 'favorites'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <span>{t.my_favorites}</span>
+              <span>{t.my_favorites || 'المحفوظات'}</span>
               {favoritesCount > 0 && (
                 <span className="bg-red-500/80 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
                   {favoritesCount > 99 ? '99+' : favoritesCount}
                 </span>
               )}
             </button>
+
+            <Link
+              href="/blog"
+              className="px-3.5 py-1.5 rounded-full font-bold text-gray-400 hover:text-white transition-all duration-200"
+            >
+              {t.nav_blog || 'المدونة والأدلة'}
+            </Link>
+
+            <Link
+              href="/about"
+              className="px-3.5 py-1.5 rounded-full font-bold text-gray-400 hover:text-white transition-all duration-200"
+            >
+              {t.nav_about || 'من نحن'}
+            </Link>
+
+            <Link
+              href="/contact"
+              className="px-3.5 py-1.5 rounded-full font-bold text-gray-400 hover:text-white transition-all duration-200"
+            >
+              {t.nav_contact || 'اتصل بنا'}
+            </Link>
           </nav>
 
           {/* Search Box on Desktop */}
           <div className="relative flex-1 max-w-xs">
-            <div className="relative flex items-center">
-              <SearchIcon className="w-4 h-4 text-gray-400 absolute right-3 pointer-events-none" />
+            <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+              <SearchIcon className={`w-4 h-4 text-gray-400 absolute ${isRTL ? 'right-3' : 'left-3'} pointer-events-none`} />
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                value={localSearch}
+                onChange={(e) => {
+                  setLocalSearch(e.target.value);
+                  if (onSearchChange) onSearchChange(e.target.value);
+                }}
                 onFocus={() => {
-                  if (searchQuery.trim().length >= 2) setSearchOpen(true);
+                  if (setSearchOpen && localSearch.trim().length >= 2) setSearchOpen(true);
                 }}
                 placeholder={t.search_placeholder}
-                className="w-full bg-[#13151f] border border-white/10 rounded-full pr-9 pl-4 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition"
+                className={`w-full bg-[#13151f] border border-white/10 rounded-full ${
+                  isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'
+                } py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition`}
               />
-            </div>
-            <SearchDropdown
-              results={searchResults}
-              loading={searchLoading}
-              onSelect={onSelectResult}
-              isOpen={searchOpen}
-            />
+            </form>
+            {onSelectResult && (
+              <SearchDropdown
+                results={searchResults}
+                loading={searchLoading}
+                onSelect={onSelectResult}
+                isOpen={searchOpen}
+              />
+            )}
           </div>
         </div>
 
-        {/* Right Section: Language Switcher & Authentication */}
+        {/* Right Section: Language Switcher, Auth & Mobile Menu Button */}
         <div className="flex items-center gap-2 sm:gap-2.5 justify-end">
-          <div className="hidden md:flex">
+          <div className="hidden sm:flex">
             <PWAInstallButton />
           </div>
+
           {/* Language Switcher Dropdown */}
           <div className="relative" ref={langRef}>
             <button
@@ -172,13 +258,13 @@ export default function Header({
               onClick={() => setLangOpen((prev) => !prev)}
               aria-expanded={langOpen}
               aria-haspopup="listbox"
-              aria-label={lang === 'ar' ? 'تغيير لغة العرض' : 'Change language'}
+              aria-label="Change language / تغيير لغة الموقع"
               className="flex items-center gap-1.5 bg-[#13151f] hover:bg-white/10 border border-white/10 text-gray-200 text-xs font-semibold px-2.5 py-1.5 rounded-full transition cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-red-500"
             >
               <Globe className="w-3.5 h-3.5 text-red-500 shrink-0" />
-              <span className="text-sm leading-none" aria-hidden="true">{currentLang.flag}</span>
-              <span className="hidden sm:inline text-xs font-bold text-gray-200">{currentLang.label}</span>
-              <span className="sm:hidden text-[11px] font-bold uppercase">{currentLang.code}</span>
+              <span className="text-sm leading-none" aria-hidden="true">{currentLangObj.flag}</span>
+              <span className="hidden sm:inline text-xs font-bold text-gray-200">{currentLangObj.label}</span>
+              <span className="sm:hidden text-[11px] font-bold uppercase">{currentLangObj.code}</span>
               <ChevronDown
                 className={`w-3 h-3 text-gray-400 transition-transform duration-200 shrink-0 ${
                   langOpen ? 'rotate-180 text-red-400' : ''
@@ -189,24 +275,21 @@ export default function Header({
             {langOpen && (
               <div
                 role="listbox"
-                aria-label={lang === 'ar' ? 'اختر لغة العرض' : 'Select language'}
-                className="absolute top-full mt-2 end-0 z-50 min-w-[170px] bg-[#0e1017]/95 backdrop-blur-xl border border-white/15 rounded-2xl p-1.5 shadow-2xl flex flex-col gap-0.5 animate-in fade-in zoom-in-95"
+                aria-label="Select language"
+                className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} z-50 min-w-[170px] bg-[#0e1017]/95 backdrop-blur-xl border border-white/15 rounded-2xl p-1.5 shadow-2xl flex flex-col gap-0.5 animate-in fade-in zoom-in-95`}
               >
                 <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 mb-1">
-                  {lang === 'ar' ? 'لغة الموقع' : 'Language'}
+                  {activeLang === 'ar' ? 'لغة الموقع' : 'Site Language'}
                 </div>
                 {LANGUAGES.map((item) => {
-                  const isSelected = item.code === lang;
+                  const isSelected = item.code === activeLang;
                   return (
                     <button
                       key={item.code}
                       type="button"
                       role="option"
                       aria-selected={isSelected}
-                      onClick={() => {
-                        onLangChange(item.code);
-                        setLangOpen(false);
-                      }}
+                      onClick={() => handleLanguageSelect(item.code)}
                       className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
                         isSelected
                           ? 'bg-red-600/15 text-red-400 font-bold'
@@ -243,29 +326,173 @@ export default function Header({
               <span className="text-xs font-semibold max-w-[80px] truncate hidden sm:inline text-gray-200">
                 {user.displayName?.split(' ')[0] || user.email?.split('@')[0]}
               </span>
-              <button
-                type="button"
-                onClick={onLogout}
-                aria-label={t.signout_btn}
-                title={t.signout_btn}
-                className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-white/5 transition cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  aria-label={t.signout_btn}
+                  title={t.signout_btn}
+                  className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-white/5 transition cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={onLogin}
-              aria-label={t.login_btn}
-              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-md shadow-red-600/25 transition cursor-pointer active:scale-95 shrink-0"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline sm:inline">{t.login_btn}</span>
-            </button>
+            onLogin && (
+              <button
+                type="button"
+                onClick={onLogin}
+                aria-label={t.login_btn}
+                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-md shadow-red-600/25 transition cursor-pointer active:scale-95 shrink-0"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline sm:inline">{t.login_btn}</span>
+              </button>
+            )
           )}
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="قائمة التصفح"
+            className="lg:hidden p-2 text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5 text-red-500" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Slide-Down Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden border-b border-white/10 bg-[#0a0c13]/98 backdrop-blur-2xl px-4 py-5 shadow-2xl animate-in fade-in slide-in-from-top-3">
+          {/* Mobile Search Input */}
+          <form onSubmit={handleSearchSubmit} className="relative mb-5">
+            <div className="relative flex items-center">
+              <SearchIcon className={`w-4 h-4 text-gray-400 absolute ${isRTL ? 'right-3' : 'left-3'} pointer-events-none`} />
+              <input
+                type="text"
+                value={localSearch}
+                onChange={(e) => {
+                  setLocalSearch(e.target.value);
+                  if (onSearchChange) onSearchChange(e.target.value);
+                }}
+                placeholder={t.search_placeholder}
+                className={`w-full bg-[#13151f] border border-white/15 rounded-2xl ${
+                  isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'
+                } py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition`}
+              />
+            </div>
+          </form>
+
+          {/* Mobile Language Switcher Quick Chips */}
+          <div className="mb-4 p-2 bg-white/5 rounded-2xl border border-white/5">
+            <div className="text-[11px] font-bold text-gray-400 mb-2 px-1 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-red-500" />
+              <span>{activeLang === 'ar' ? 'اختر لغة الموقع:' : 'Choose site language:'}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {LANGUAGES.map((item) => (
+                <button
+                  key={item.code}
+                  type="button"
+                  onClick={() => handleLanguageSelect(item.code)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    item.code === activeLang
+                      ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                      : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  }`}
+                >
+                  <span>{item.flag}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="grid grid-cols-2 gap-2 text-xs font-semibold mb-2">
+            <button
+              type="button"
+              onClick={() => handleNavClick('home')}
+              className={`p-3 rounded-2xl flex items-center gap-2.5 transition ${isRTL ? 'text-right' : 'text-left'} cursor-pointer ${
+                activeTab === 'home'
+                  ? 'bg-red-600 text-white font-bold'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              <span>{t.nav_home || 'الرئيسية'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick('favorites')}
+              className={`p-3 rounded-2xl flex items-center justify-between transition ${isRTL ? 'text-right' : 'text-left'} cursor-pointer ${
+                activeTab === 'favorites'
+                  ? 'bg-red-600 text-white font-bold'
+                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Bookmark className="w-4 h-4" />
+                <span>{t.my_favorites || 'المفضلة'}</span>
+              </div>
+              {favoritesCount > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                  {favoritesCount}
+                </span>
+              )}
+            </button>
+
+            <Link
+              href="/blog"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center gap-2.5 transition"
+            >
+              <BookOpen className="w-4 h-4 text-purple-400" />
+              <span>{t.nav_blog || 'المدونة والأدلة'}</span>
+            </Link>
+
+            <Link
+              href="/about"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center gap-2.5 transition"
+            >
+              <Info className="w-4 h-4 text-blue-400" />
+              <span>{t.nav_about || 'من نحن'}</span>
+            </Link>
+
+            <Link
+              href="/contact"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center gap-2.5 transition"
+            >
+              <Mail className="w-4 h-4 text-emerald-400" />
+              <span>{t.nav_contact || 'اتصل بنا'}</span>
+            </Link>
+
+            <Link
+              href="/privacy-policy"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center gap-2.5 transition"
+            >
+              <Shield className="w-4 h-4 text-amber-400" />
+              <span>{t.nav_privacy || 'سياسة الخصوصية'}</span>
+            </Link>
+
+            <Link
+              href="/terms"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-300 flex items-center gap-2.5 transition col-span-2"
+            >
+              <Scale className="w-4 h-4 text-rose-400" />
+              <span>{t.nav_terms || 'شروط واتفاقية الاستخدام'}</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

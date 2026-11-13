@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileNav from '@/components/MobileNav';
@@ -11,11 +12,32 @@ import Player from '@/components/Player';
 import MediaCard from '@/components/MediaCard';
 import UnauthorizedDomainModal from '@/components/UnauthorizedDomainModal';
 import Hero from '@/components/Hero';
+import AdBanner from '@/components/AdBanner';
+import { BLOG_POSTS } from '@/lib/blogData';
+import { useLanguage } from '@/context/LanguageContext';
 import { fetchTMDB } from '@/lib/tmdb';
 import { auth, googleProvider, db } from '@/lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, setDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
-import { Play, Bookmark, Search as SearchIcon, Film, Trash2, ArrowLeft, X, Tv } from 'lucide-react';
+import { 
+  Play, 
+  Bookmark, 
+  Search as SearchIcon, 
+  Film, 
+  Trash2, 
+  ArrowLeft, 
+  X, 
+  Tv, 
+  ChevronDown, 
+  HelpCircle, 
+  BookOpen, 
+  ShieldCheck, 
+  CheckCircle2, 
+  Award, 
+  Sparkles,
+  Calendar,
+  Clock
+} from 'lucide-react';
 import { MediaItem, LangCode, ContinueWatchingItem } from '@/types';
 import { T, LANGUAGES } from '@/lib/i18n';
 import {
@@ -40,8 +62,8 @@ export interface FalakClientPageProps {
 }
 
 export default function FalakClientPage({ initialSearchParams }: FalakClientPageProps) {
-  // Language & Localization State (SSR-safe default 'ar')
-  const [lang, setLang] = useState<LangCode>('ar');
+  // Language & Localization State from global LanguageProvider
+  const { lang, setLanguage, isRTL, dir } = useLanguage();
   const t = T[lang] || T.ar;
   const tmdbLang = LANGUAGES.find((l) => l.code === lang)?.tmdb || 'ar-SA';
 
@@ -63,6 +85,51 @@ export default function FalakClientPage({ initialSearchParams }: FalakClientPage
   const [isInitialPermalinkLoading, setIsInitialPermalinkLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+
+  const faqItems = lang === 'ar' ? [
+    {
+      q: 'ما هي منصة فلك TV وما الذي يميزها عن المنصات الأخرى؟',
+      a: 'فلك TV هي منصة ترفيهية وسينمائية متطورة تجمع بين الفهرسة الشاملة لأحدث الأفلام والمسلسلات العالمية بجودة فائقة تصل إلى 4K، ونظام ذكي متكامل لجلب ومزامنة الترجمات تلقائياً، مع واجهة مستخدم سريعة وخالية من النوافذ المنبثقة المزعجة.',
+    },
+    {
+      q: 'كيف تعمل ميزة الترجمة الذكية في مشغل الفيديو؟',
+      a: 'يعتمد مشغل فلك على خوارزميات ذكية تتعرف على بصمة العمل الفني وتجلب ملفات الترجمة المعتمدة (SRT/VTT) بدقة متناهية مع دعم التشفير القياسي UTF-8 لتفادي مشكلات الحروف المقلوبة، مع إمكانية تقديم أو تأخير التوقيت (±0.5s).',
+    },
+    {
+      q: 'ما هي سرعة اتصال الإنترنت الموصى بها لمشاهدة بدون تقطيع؟',
+      a: 'لبث بدقة HD (1080p)، نوصي بسرعة 5-10 ميجابت/ثانية. أما لبث 4K مع تقنية HDR، فالسرعة الموصى بها 25 ميجابت/ثانية أو أعلى مع تفضيل الاتصال السلكي أو Wi-Fi 5GHz.',
+    },
+    {
+      q: 'هل تطبيق فلك متاح للتثبيت على الهواتف والأجهزة الذكية؟',
+      a: 'نعم! تدعم منصة فلك تقنية تطبيقات الويب التقدمية (PWA)، مما يتيح لك تثبيت المنصة كتطبيق أصلي خفيف وسريع على أجهزة Android و iPhone وشاشات التلفزيون الذكية وحواسيب Windows و Mac بضغطة زر واحدة.',
+    },
+    {
+      q: 'ما هي سياسة الإعلانات واحترام خصوصية المستخدم في فلك؟',
+      a: 'نحن نعتمد نظام إعلاني منظم ومتوافق بنسبة 100% مع شبكة Google AdSense، حيث نحرص على عدم تشويش تجربة المشاهد أو تغطية أزرار التحكم بمشغل الفيديو، مع توفير خيارات واضحة للموافقة على ملفات تعريف الارتباط وفقاً لسياسة الخصوصية.',
+    },
+  ] : [
+    {
+      q: lang === 'fr' ? 'Qu’est-ce que Falak TV et qu’est-ce qui le rend unique ?' : lang === 'es' ? '¿Qué es Falak TV y qué lo hace único?' : lang === 'tr' ? 'Falak TV nedir ve onu özel kılan nedir?' : 'What is Falak TV and what makes it unique?',
+      a: lang === 'fr' ? 'Falak TV est une plateforme cinématographique moderne offrant du streaming 4K/HD, une synchronisation intelligente des sous-titres et une interface rapide conforme aux normes de qualité.' : lang === 'es' ? 'Falak TV es una plataforma cinematográfica moderna que ofrece streaming 4K/HD, sincronización inteligente de subtítulos y una interfaz rápida sin anuncios intrusivos.' : lang === 'tr' ? 'Falak TV, 4K/HD yayın, akıllı altyazı senkronizasyonu ve hızlı sunucular sunan modern bir sinema platformudur.' : 'Falak TV is a modern cinema and entertainment platform offering 4K/HD streaming, smart subtitle synchronization, fast servers, and an ad-safe experience.',
+    },
+    {
+      q: lang === 'fr' ? 'Comment fonctionne la synchronisation intelligente des sous-titres ?' : lang === 'es' ? '¿Cómo funciona la sincronización inteligente de subtítulos?' : lang === 'tr' ? 'Akıllı altyazı senkronizasyonu nasıl çalışır?' : 'How does smart subtitle synchronization work?',
+      a: lang === 'fr' ? 'Notre lecteur détecte automatiquement l’empreinte de la vidéo et charge les sous-titres avec encodage UTF-8 et décalage manuel précis.' : lang === 'es' ? 'Nuestro reproductor detecta la huella del video y carga los subtítulos con codificación UTF-8 y ajuste de retardo manual.' : lang === 'tr' ? 'Oynatıcımız video parmak izini algılar ve UTF-8 kodlaması ve manuel zamanlama ayarı ile uyumlu altyazıları yükler.' : 'Our player automatically matches video fingerprints and loads verified UTF-8 subtitles with precision manual offset controls (±0.5s).',
+    },
+    {
+      q: lang === 'fr' ? 'Quelle vitesse Internet est recommandée ?' : lang === 'es' ? '¿Qué velocidad de internet se recomienda?' : lang === 'tr' ? 'Hangi internet hızı önerilir?' : 'What internet speed is recommended?',
+      a: lang === 'fr' ? 'Pour la HD (1080p), 5 à 10 Mbps suffisent. Pour la 4K HDR, 25 Mbps ou plus sont recommandés sur réseau filaire ou Wi-Fi 5GHz.' : lang === 'es' ? 'Para HD (1080p), se recomienda 5-10 Mbps. Para 4K HDR, se recomienda 25 Mbps o superior en red cableada o Wi-Fi 5GHz.' : lang === 'tr' ? 'HD için 5-10 Mbps yeterlidir. 4K HDR için kablolu bağlantı veya 5GHz Wi-Fi ile 25 Mbps ve üzeri önerilir.' : 'For 1080p HD streaming, 5-10 Mbps is recommended; for 4K HDR, 25 Mbps or higher is ideal via Ethernet or 5GHz Wi-Fi.',
+    },
+    {
+      q: lang === 'fr' ? 'Falak TV est-il installable comme application (PWA) ?' : lang === 'es' ? '¿Se puede instalar Falak TV como app (PWA)?' : lang === 'tr' ? 'Falak TV bir uygulama (PWA) olarak kurulabilir mi?' : 'Is Falak TV installable as a web app (PWA)?',
+      a: lang === 'fr' ? 'Oui, vous pouvez installer Falak TV directement sur Android, iPhone, PC, Mac et Smart TV en un clic sans passer par un store.' : lang === 'es' ? 'Sí, puedes instalar Falak TV directamente en Android, iPhone, PC, Mac y Smart TV con un solo clic.' : lang === 'tr' ? 'Evet, Falak TV’yi Android, iPhone, Windows, Mac ve Akıllı TV’lere tek tıkla yükleyebilirsiniz.' : 'Yes! Falak supports Progressive Web App (PWA) technology, allowing you to install it natively on Android, iOS, Windows, Mac, and Smart TVs in one click.',
+    },
+    {
+      q: lang === 'fr' ? 'Quelle est la politique de confidentialité et de publicité ?' : lang === 'es' ? '¿Cuál es la política de privacidad y anuncios?' : lang === 'tr' ? 'Gizlilik ve reklam politikası nedir?' : 'What is the privacy and advertising policy?',
+      a: lang === 'fr' ? 'Nous respectons strictement les politiques Google AdSense avec des formats publicitaires non invasifs et un consentement clair aux cookies.' : lang === 'es' ? 'Cumplimos rigurosamente con las políticas de Google AdSense mediante formatos no invasivos y consentimiento transparente de cookies.' : lang === 'tr' ? 'Kullanıcı deneyimini engellemeyen temiz yerleşimlerle Google AdSense politikalarına tam olarak uyuyoruz.' : 'We adhere 100% to Google AdSense publishing guidelines, providing unobtrusive ad placements and transparent cookie consent options.',
+    },
+  ];
 
   const selectedMediaRef = useRef<any>(selectedMedia);
   useEffect(() => {
@@ -227,15 +294,7 @@ export default function FalakClientPage({ initialSearchParams }: FalakClientPage
 
   // Handle display language change with local persistence and direction update
   const handleLanguageChange = (newLang: LangCode) => {
-    setLang(newLang);
-    try {
-      localStorage.setItem('falak_lang', newLang);
-    } catch {}
-    if (typeof document !== 'undefined') {
-      document.documentElement.lang = newLang;
-      const found = LANGUAGES.find((l) => l.code === newLang);
-      document.documentElement.dir = found?.dir || (newLang === 'ar' ? 'rtl' : 'ltr');
-    }
+    setLanguage(newLang);
     const tNew = T[newLang] || T.ar;
     showAppToast(tNew.toast_lang_changed || '🌐 Language changed');
   };
@@ -324,21 +383,6 @@ export default function FalakClientPage({ initialSearchParams }: FalakClientPage
 
   // 1. Initial mount: safely restore client-side state
   useEffect(() => {
-    // 1a. Restore language preference from local storage
-    try {
-      const storedLang = localStorage.getItem('falak_lang') as LangCode;
-      if (storedLang && ['ar', 'en', 'fr', 'es', 'tr'].includes(storedLang)) {
-        queueMicrotask(() => {
-          setLang(storedLang);
-          document.documentElement.lang = storedLang;
-          const found = LANGUAGES.find((l) => l.code === storedLang);
-          document.documentElement.dir = found?.dir || (storedLang === 'ar' ? 'rtl' : 'ltr');
-        });
-      }
-    } catch (e) {
-      console.warn('Could not read stored language:', e);
-    }
-
     // 1b. Restore favorites from local storage
     try {
       const stored = localStorage.getItem(LOCAL_FAVORITES_KEY);
@@ -683,6 +727,9 @@ export default function FalakClientPage({ initialSearchParams }: FalakClientPage
               }}
             />
 
+            {/* Top AdSense Banner */}
+            <AdBanner slot="2915749601" label="إعلان ممول" className="my-4 max-w-7xl mx-auto px-4" />
+
             {/* Continue Watching Section */}
             {continueWatching.length > 0 && (
               <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
@@ -844,6 +891,215 @@ export default function FalakClientPage({ initialSearchParams }: FalakClientPage
                 </div>
               )}
             </section>
+
+            {/* Mid-Page AdSense Banner */}
+            <AdBanner slot="2915749602" label="إعلان ممول" className="my-8 max-w-7xl mx-auto px-4" />
+
+            {/* Platform Features & Editorial Architecture Section */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-white/5">
+              <div className="text-center max-w-3xl mx-auto mb-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/10 border border-red-500/20 text-red-400 text-xs font-bold mb-3">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>عن منصة فلك TV والخدمات المقدمة</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
+                  تجربة سينمائية متكاملة مصممة لعشاق الفن السابع
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
+                  نحن نجمع بين أحدث تقنيات بث الوسائط الرقمية، وأنظمة الترجمة العربية الذكية، والمحتوى التحريري الثري لتوفير بيئة ترفيهية متقدمة ومريحة لجميع أفراد الأسرة.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-[#0e1017] border border-white/10 rounded-3xl p-6 shadow-xl">
+                  <div className="w-10 h-10 rounded-2xl bg-red-600/10 text-red-500 flex items-center justify-center mb-4 border border-red-500/20">
+                    <Tv className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-2">هندسة البث الفائق 4K</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    استمتع بمشاهدة أحدث الأعمال بجودات متعددة تتكيف تلقائياً مع سرعة اتصالك، مع دعم الترميزات المتقدمة لتقليل استهلاك البيانات دون التأثير على وضوح الصورة.
+                  </p>
+                </div>
+
+                <div className="bg-[#0e1017] border border-white/10 rounded-3xl p-6 shadow-xl">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4 border border-amber-500/20">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-2">نظام الترجمة الذكية المتطابق</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    مزامنة فورية ودقيقة لملفات الترجمة العربية مع إمكانية ضبط التوقيت الزمني، وتغيير حجم الخط ولونه وخلفيته لتجربة قراءة مريحة لعينيك في أي وقت.
+                  </p>
+                </div>
+
+                <div className="bg-[#0e1017] border border-white/10 rounded-3xl p-6 shadow-xl">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-4 border border-emerald-500/20">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-2">أمان كامل وتوافق أدسنس</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    منصة تحترم خصوصية المستخدم ولا تعرض إعلانات مضللة أو منبثقة، وتلتزم بسياسات النشر العالمية وشروط Google AdSense لضمان بيئة آمنة للجميع.
+                  </p>
+                </div>
+              </div>
+
+              {/* Informational Text Box for SEO & AdSense Content Depth */}
+              <div className="bg-[#13151f] border border-white/5 rounded-3xl p-6 sm:p-8 text-xs sm:text-sm text-gray-300 leading-relaxed">
+                <h4 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-red-500" />
+                  <span>دليل تصفح المحتوى والمشاهدة العائلية</span>
+                </h4>
+                <p className="mb-3">
+                  تعتمد منصة فلك على محرك فهرسة معلوماتي متطور يرتبط بقواعد بيانات السينما العالمية الرسمية، مما يوفر لك بطاقات تعريفية تفصيلية لكل فيلم ومسلسل تشمل نبذة القصة، طاقم التمثيل، المخرج، سنة الإنتاج، التقييم الدولي، والتصنيف العمري الرقابي المعتمد، مما يتيح لك ولعائلتك اتخاذ القرار المناسب قبل بدء المشاهدة.
+                </p>
+                <div className="flex flex-wrap items-center gap-4 pt-2 text-xs">
+                  <Link href="/about" className="text-red-400 hover:text-red-300 font-bold underline underline-offset-4">
+                    تعرف أكثر على رؤية ورسالة فلك TV
+                  </Link>
+                  <span className="text-gray-600">|</span>
+                  <Link href="/privacy-policy" className="text-gray-400 hover:text-white underline underline-offset-4">
+                    قراءة سياسة الخصوصية واستخدام الكوكيز
+                  </Link>
+                </div>
+              </div>
+            </section>
+
+            {/* Cinema Guides & Articles Preview Section */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-t border-white/5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-1.5 h-5 bg-red-600 rounded-full" />
+                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                      <span>أحدث المقالات والدلائل السينمائية</span>
+                      <BookOpen className="w-4 h-4 text-purple-400" />
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    شروحات تقنية وتحليلات نقدية حصرية كُتبت بعناية لعشاق الشاشة الفضية.
+                  </p>
+                </div>
+
+                <Link
+                  href="/blog"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10 transition self-start sm:self-auto"
+                >
+                  <span>تصفح جميع الأدلة</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {BLOG_POSTS.slice(0, 3).map((post) => (
+                  <article
+                    key={post.slug}
+                    className="bg-[#0e1017] border border-white/10 hover:border-red-500/40 rounded-3xl overflow-hidden shadow-lg transition flex flex-col group"
+                  >
+                    <Link href={`/blog/${post.slug}`} className="relative h-44 overflow-hidden block">
+                      <img
+                        src={post.coverImage}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-3 right-3">
+                        <span className="px-2.5 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-red-400 border border-red-500/30 text-[10px] font-bold">
+                          {post.category}
+                        </span>
+                      </div>
+                    </Link>
+
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-2">
+                          <span>{post.date}</span>
+                          <span>•</span>
+                          <span>{post.readTime}</span>
+                        </div>
+                        <h3 className="text-sm font-bold text-white group-hover:text-red-400 transition line-clamp-2 mb-2 leading-snug">
+                          <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                        </h3>
+                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed mb-4">
+                          {post.excerpt}
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                        <span className="text-gray-400 text-[11px] font-medium">{post.author.name}</span>
+                        <Link
+                          href={`/blog/${post.slug}`}
+                          className="text-red-400 font-bold hover:text-red-300 flex items-center gap-1 transition"
+                        >
+                          <span>قراءة</span>
+                          <ArrowLeft className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            {/* Interactive FAQ Section */}
+            <section className="max-w-4xl mx-auto px-4 sm:px-6 py-12 border-t border-white/5">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/10 border border-red-500/20 text-red-400 text-xs font-bold mb-2">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>مركز المساعدة والمعلومات</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white mb-2">الأسئلة الشائعة حول منصة فلك TV</h2>
+                <p className="text-xs sm:text-sm text-gray-400">
+                  إليك إجابات شافية وموجزة عن أبرز التساؤلات التي يطرحها مستخدمو وزوار منصتنا.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {faqItems.map((item, idx) => {
+                  const isOpen = openFaqIndex === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-[#0e1017] border border-white/10 rounded-2xl overflow-hidden transition-all"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                        className="w-full p-4 sm:p-5 flex items-center justify-between text-right gap-3 cursor-pointer select-none hover:bg-white/[0.02] transition"
+                        aria-expanded={isOpen}
+                      >
+                        <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+                          <span>{item.q}</span>
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0 ${
+                            isOpen ? 'rotate-180 text-red-500' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {isOpen && (
+                        <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-gray-300 leading-relaxed border-t border-white/5">
+                          {item.a}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8 text-center bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                <p className="text-xs text-gray-400 mb-2">لم تجد إجابة لسؤالك؟ نحن مستعدون للمساعدة دائماً.</p>
+                <Link
+                  href="/contact"
+                  className="text-xs font-bold text-red-400 hover:text-red-300 underline underline-offset-4"
+                >
+                  تواصل مباشرة مع فريق الدعم الفني
+                </Link>
+              </div>
+            </section>
+
+            {/* Bottom AdSense Banner */}
+            <AdBanner slot="2915749603" label="إعلان ممول" className="my-10 max-w-7xl mx-auto px-4" />
           </div>
         )}
 
